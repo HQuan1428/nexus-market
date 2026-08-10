@@ -128,7 +128,7 @@ after its corresponding implementation commit is complete.
 
 ### Task 8 — T008 Bounded healthcheck timing
 
-- [ ] T008 Make every Compose healthcheck use an interval of at most 10 seconds and a finite `start_period`, then enforce both constraints in `tests/infrastructure/docker-compose.test.mjs` per plan: healthcheck decision (partial)
+- [x] T008 Make every Compose healthcheck use an interval of at most 10 seconds and a finite `start_period`, then enforce both constraints in `tests/infrastructure/docker-compose.test.mjs` per plan: healthcheck decision (partial)
 
 ### Task 9 — T009 Compose runtime contract coverage
 
