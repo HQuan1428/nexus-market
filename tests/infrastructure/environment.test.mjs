@@ -35,14 +35,37 @@ function readComposeFile() {
   return fs.readFileSync(composePath, 'utf8');
 }
 
-test('The example environment file documents every required non-secret variable', () => {
+function runComposeConfigWithMissing(variableName) {
+  const environment = { ...process.env };
+
+  for (const requiredVariable of requiredVariables) {
+    delete environment[requiredVariable];
+  }
+
+  environment[variableName] = '';
+
+  return spawnSync(
+    'docker',
+    ['compose', '--env-file', envExamplePath, '-f', composePath, 'config'],
+    {
+      cwd: repoRoot,
+      encoding: 'utf8',
+      env: environment,
+    },
+  );
+}
+
+test('The example environment file documents every required non-secret placeholder', () => {
   const envExample = readEnvExample();
 
   for (const variableName of requiredVariables) {
+    const match = envExample.match(new RegExp(`^${variableName}=([^\\r\\n]*)$`, 'm'));
+
+    assert.ok(match, `Expected ${variableName} to be documented in .env.example.`);
     assert.match(
-      envExample,
-      new RegExp(`^${variableName}=.+$`, 'm'),
-      `Expected ${variableName} to be documented in .env.example.`,
+      match[1],
+      /^replace_me_local_only_[A-Za-z0-9_]+$/,
+      `Expected ${variableName} to use an obvious non-secret placeholder.`,
     );
   }
 });
@@ -69,37 +92,39 @@ test('Compose source uses fail-closed required substitutions for every secret-be
   }
 });
 
-test('Compose fails with variable-specific messages when required environment values are absent', () => {
+test('Compose fails when each required environment variable is absent', () => {
   if (!fs.existsSync(envExamplePath) || !fs.existsSync(composePath)) {
     test.skip('Compose validation starts once both .env.example and docker-compose.yml exist.');
     return;
   }
 
-  const command = spawnSync(
-    'docker',
-    ['compose', '--env-file', envExamplePath, '-f', composePath, 'config'],
-    {
-      cwd: repoRoot,
-      encoding: 'utf8',
-      env: {
-        ...process.env,
-        POSTGRES_DB: '',
-        POSTGRES_USER: '',
-        POSTGRES_PASSWORD: '',
-        MINIO_ROOT_USER: '',
-        MINIO_ROOT_PASSWORD: '',
-      },
-    },
-  );
-
-  assert.notEqual(command.status, 0, 'Expected docker compose config to fail without required values.');
-  const combinedOutput = `${command.stdout}\n${command.stderr}`;
-
   for (const variableName of requiredVariables) {
+    const command = runComposeConfigWithMissing(variableName);
+    const combinedOutput = `${command.stdout}\n${command.stderr}`;
+
+    assert.notEqual(
+      command.status,
+      0,
+      `Expected docker compose config to fail when ${variableName} is empty.`,
+    );
     assert.match(
       combinedOutput,
       new RegExp(variableName),
-      `Expected Compose output to mention ${variableName}.`,
+      `Expected Compose output to name ${variableName}.`,
     );
   }
+});
+
+test('Git ignores .env but keeps .env.example visible to version control', () => {
+  const ignoredEnv = spawnSync('git', ['check-ignore', '--no-index', '--quiet', '.env'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  const visibleExample = spawnSync('git', ['check-ignore', '--no-index', '--quiet', '.env.example'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+
+  assert.equal(ignoredEnv.status, 0, 'Expected .env to be ignored by Git.');
+  assert.equal(visibleExample.status, 1, 'Expected .env.example not to be ignored by Git.');
 });
