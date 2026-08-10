@@ -41,7 +41,7 @@ Do not build speculative flexibility for unapproved future requirements.
 
 ## 4. Target Architecture
 
-Use Next.js 15 with TypeScript for both frontend and backend concerns.
+Use Next.js 16 with TypeScript for both frontend and backend concerns.
 Deploy the application as a modular monolith unless an approved plan changes it.
 Docker is the standard deployment and local infrastructure environment.
 Organize future code around business capabilities, not only technical layers.
