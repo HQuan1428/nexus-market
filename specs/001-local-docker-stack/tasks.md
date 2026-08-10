@@ -132,7 +132,7 @@ after its corresponding implementation commit is complete.
 
 ### Task 9 — T009 Compose runtime contract coverage
 
-- [ ] T009 Extend `tests/infrastructure/docker-compose.test.mjs` to enforce exact published ports, `unless-stopped` restart policies, and explicit runtime network/volume names per T001, T003, FR-001–FR-007, FR-013, and FR-014 (partial)
+- [x] T009 Extend `tests/infrastructure/docker-compose.test.mjs` to enforce exact published ports, `unless-stopped` restart policies, and explicit runtime network/volume names per T001, T003, FR-001–FR-007, FR-013, and FR-014 (partial)
 
 ### Task 10 — T010 Environment contract coverage
 
