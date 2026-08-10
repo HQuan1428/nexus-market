@@ -32,6 +32,24 @@ function parseDockerStages(dockerfile) {
     });
 }
 
+function getDockerStage(dockerfile, alias) {
+  const stageStart = dockerfile.search(
+    new RegExp(`^FROM\\s+[^\\s]+\\s+AS\\s+${alias}\\s*$`, 'im'),
+  );
+
+  assert.notEqual(stageStart, -1, `Expected Dockerfile to define the ${alias} stage.`);
+
+  const stageAndFollowing = dockerfile.slice(stageStart);
+  const firstLineEnd = stageAndFollowing.indexOf('\n');
+  const remainingDockerfile =
+    firstLineEnd === -1 ? '' : stageAndFollowing.slice(firstLineEnd + 1);
+  const followingStageOffset = remainingDockerfile.search(/^FROM\s+/im);
+
+  return followingStageOffset === -1
+    ? stageAndFollowing
+    : stageAndFollowing.slice(0, firstLineEnd + 1 + followingStageOffset);
+}
+
 function assertNodeDerivedStages(stages) {
   const derivationMap = new Map();
 
@@ -77,4 +95,15 @@ test('Dockerfile installs dependencies with frozen lockfile, builds, and starts 
   assert.match(dockerfile, /pnpm\s+build/i);
   assert.match(dockerfile, /(CMD|ENTRYPOINT)\s+\[?"?pnpm"?/i);
   assert.match(dockerfile, /(CMD|ENTRYPOINT)[^\n]*"?start"?/i);
+});
+
+test('Dockerfile prevents pnpm from mutating dependencies when the non-root runner starts', () => {
+  const dockerfile = readDockerfile();
+  const runnerStage = getDockerStage(dockerfile, 'runner');
+
+  assert.match(
+    runnerStage,
+    /^ENV[ \t]+PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false[ \t]*$/m,
+    'Expected the immutable runner to disable pnpm dependency auto-install before pnpm start.',
+  );
 });

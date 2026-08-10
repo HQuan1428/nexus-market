@@ -27,6 +27,7 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false
 
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next

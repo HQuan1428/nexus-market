@@ -30,7 +30,7 @@
 
 ### Task 1 — T001 Contract test harness
 
-- [ ] T001 Add `test:infra` to `package.json`; create focused Node built-in tests in `tests/infrastructure/dockerfile.test.mjs`, `tests/infrastructure/docker-compose.test.mjs`, and `tests/infrastructure/environment.test.mjs` covering every Global Constraint; run each file separately and record expected RED failures caused only by missing `Dockerfile`, `docker-compose.yml`, and `.env.example`
+- [x] T001 Add `test:infra` to `package.json`; create focused Node built-in tests in `tests/infrastructure/dockerfile.test.mjs`, `tests/infrastructure/docker-compose.test.mjs`, and `tests/infrastructure/environment.test.mjs` covering every Global Constraint; run each file separately and record expected RED failures caused only by missing `Dockerfile`, `docker-compose.yml`, and `.env.example`
 
 **Checkpoint**: Three contract test files exist and each is proven capable of failing for its missing production artifact.
 
@@ -44,11 +44,11 @@
 
 ### Task 2 — T002 Application image contract
 
-- [ ] T002 [US1] Make `tests/infrastructure/dockerfile.test.mjs` GREEN by implementing the approved multi-stage non-root pnpm build in `Dockerfile` and build-context exclusions in `.dockerignore`; rerun the focused test and keep unrelated Compose tests RED
+- [x] T002 [US1] Make `tests/infrastructure/dockerfile.test.mjs` GREEN by implementing the approved multi-stage non-root pnpm build in `Dockerfile` and build-context exclusions in `.dockerignore`; rerun the focused test and keep unrelated Compose tests RED
 
 ### Task 3 — T003 Compose topology contract
 
-- [ ] T003 [US1] Make `tests/infrastructure/docker-compose.test.mjs` GREEN by implementing the exact five-service topology, ports, bounded healthchecks, readiness dependencies, shared network, and PostgreSQL/MinIO named volumes in `docker-compose.yml`; rerun the focused test and keep the environment-documentation test RED only for its missing artifact
+- [x] T003 [US1] Make `tests/infrastructure/docker-compose.test.mjs` GREEN by implementing the exact five-service topology, ports, bounded healthchecks, readiness dependencies, shared network, and PostgreSQL/MinIO named volumes in `docker-compose.yml`; rerun the focused test and keep the environment-documentation test RED only for its missing artifact
 
 **Checkpoint**: Application image and Compose topology contracts pass independently.
 
@@ -62,7 +62,7 @@
 
 ### Task 4 — T004 Fail-closed environment contract
 
-- [ ] T004 [US2] Make `tests/infrastructure/environment.test.mjs` GREEN by adding non-secret placeholders to `.env.example`, adding `!.env.example` after the existing `.env*` rule in `.gitignore`, and ensuring every required substitution in `docker-compose.yml` fails with a variable-specific message; run the focused test and then `pnpm test:infra`
+- [x] T004 [US2] Make `tests/infrastructure/environment.test.mjs` GREEN by adding non-secret placeholders to `.env.example`, adding `!.env.example` after the existing `.env*` rule in `.gitignore`, and ensuring every required substitution in `docker-compose.yml` fails with a variable-specific message; run the focused test and then `pnpm test:infra`
 
 **Checkpoint**: Both user stories pass the complete infrastructure contract suite.
 
@@ -74,7 +74,7 @@
 
 ### Task 5 — T005 End-to-end verification
 
-- [ ] T005 Run `pnpm test:infra`, `docker compose --env-file .env.example config --quiet`, `docker compose --env-file .env.example build app`, `pnpm lint`, and `pnpm build`; if local ports are available, run `docker compose --env-file .env.example up -d --wait`, create PostgreSQL and MinIO sentinel data, force-recreate those two containers without deleting named volumes, verify both sentinels remain, clean only the sentinels, then run `docker compose down`; compare results with `specs/001-local-docker-stack/quickstart.md` and update only incorrect validation instructions
+- [x] T005 Run `pnpm test:infra`, `docker compose --env-file .env.example config --quiet`, `docker compose --env-file .env.example build app`, `pnpm lint`, and `pnpm build`; if local ports are available, run `docker compose --env-file .env.example up -d --wait`, create PostgreSQL and MinIO sentinel data, force-recreate those two containers without deleting named volumes, verify both sentinels remain, clean only the sentinels, then run `docker compose down`; compare results with `specs/001-local-docker-stack/quickstart.md` and update only incorrect validation instructions
 
 ---
 
