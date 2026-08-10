@@ -29,11 +29,11 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false
 
-COPY --from=prod-deps /app/node_modules ./node_modules
-COPY --from=build /app/.next ./.next
-COPY --from=build /app/public ./public
-COPY --from=build /app/package.json ./package.json
-COPY --from=build /app/next.config.ts ./next.config.ts
+COPY --chown=node:node --from=prod-deps /app/node_modules ./node_modules
+COPY --chown=node:node --from=build /app/.next ./.next
+COPY --chown=node:node --from=build /app/public ./public
+COPY --chown=node:node --from=build /app/package.json ./package.json
+COPY --chown=node:node --from=build /app/next.config.ts ./next.config.ts
 
 EXPOSE 3000
 

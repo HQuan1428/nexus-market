@@ -118,6 +118,35 @@ test('Dockerfile prevents pnpm from mutating dependencies when the non-root runn
   );
 });
 
+test('Dockerfile assigns node ownership to every runtime input copied into the final runner', () => {
+  const dockerfile = readDockerfile();
+  const runnerStage = getDockerStage(dockerfile, 'runner');
+  const runnerCopies = runnerStage
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^COPY\b/i.test(line));
+
+  assert.deepEqual(
+    runnerCopies,
+    [
+      'COPY --chown=node:node --from=prod-deps /app/node_modules ./node_modules',
+      'COPY --chown=node:node --from=build /app/.next ./.next',
+      'COPY --chown=node:node --from=build /app/public ./public',
+      'COPY --chown=node:node --from=build /app/package.json ./package.json',
+      'COPY --chown=node:node --from=build /app/next.config.ts ./next.config.ts',
+    ],
+    'Expected the runner to copy every production runtime input explicitly.',
+  );
+  assert.ok(runnerCopies.length > 0, 'Expected the runner to copy production runtime inputs.');
+  for (const copyInstruction of runnerCopies) {
+    assert.match(
+      copyInstruction,
+      /^COPY\s+--chown=node:node\b/i,
+      `Expected runner COPY to assign node ownership: ${copyInstruction}`,
+    );
+  }
+});
+
 test('Dockerfile switches the effective final runner to the unprivileged node user before startup', () => {
   const dockerfile = readDockerfile();
   const stages = parseDockerStages(dockerfile);
