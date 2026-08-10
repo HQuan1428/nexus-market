@@ -26,6 +26,15 @@ function readEnvExample() {
   return fs.readFileSync(envExamplePath, 'utf8');
 }
 
+function readComposeFile() {
+  assert.ok(
+    fs.existsSync(composePath),
+    'Expected docker-compose.yml to exist at the repository root.',
+  );
+
+  return fs.readFileSync(composePath, 'utf8');
+}
+
 test('The example environment file documents every required non-secret variable', () => {
   const envExample = readEnvExample();
 
@@ -34,6 +43,28 @@ test('The example environment file documents every required non-secret variable'
       envExample,
       new RegExp(`^${variableName}=.+$`, 'm'),
       `Expected ${variableName} to be documented in .env.example.`,
+    );
+  }
+});
+
+test('Compose source uses fail-closed required substitutions for every secret-bearing variable', () => {
+  if (!fs.existsSync(envExamplePath) || !fs.existsSync(composePath)) {
+    test.skip('Compose source validation starts once both .env.example and docker-compose.yml exist.');
+    return;
+  }
+
+  const composeFile = readComposeFile();
+
+  for (const variableName of requiredVariables) {
+    assert.match(
+      composeFile,
+      new RegExp(`\\$\\{${variableName}:\\?[^}]+\\}`),
+      `Expected docker-compose.yml to require ${variableName} with \${${variableName}:?message}.`,
+    );
+    assert.doesNotMatch(
+      composeFile,
+      new RegExp(`\\$\\{${variableName}:-`),
+      `Expected docker-compose.yml to fail closed for ${variableName} without a default value.`,
     );
   }
 });

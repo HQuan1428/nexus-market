@@ -17,10 +17,50 @@ function readDockerfile() {
   return fs.readFileSync(dockerfilePath, 'utf8');
 }
 
-test('Dockerfile uses the required Node 22 build and runtime base image', () => {
-  const dockerfile = readDockerfile();
+function parseDockerStages(dockerfile) {
+  return dockerfile
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^FROM\s+/i.test(line))
+    .map((line) => {
+      const match = line.match(/^FROM\s+([^\s]+)(?:\s+AS\s+([^\s]+))?$/i);
+      assert.ok(match, `Expected valid Docker FROM syntax: ${line}`);
+      return {
+        base: match[1],
+        alias: match[2],
+      };
+    });
+}
 
-  assert.match(dockerfile, /^FROM\s+node:22-bookworm-slim\b/gm);
+function assertNodeDerivedStages(stages) {
+  const derivationMap = new Map();
+
+  for (const stage of stages) {
+    const directNodeBase = stage.base === 'node:22-bookworm-slim';
+    const aliasDerivedBase = derivationMap.get(stage.base) === true;
+    const isDerived = directNodeBase || aliasDerivedBase;
+
+    assert.ok(
+      isDerived,
+      `Expected every Docker stage to derive from node:22-bookworm-slim, but found base ${stage.base}.`,
+    );
+
+    if (stage.alias) {
+      derivationMap.set(stage.alias, true);
+    }
+  }
+}
+
+test('Dockerfile uses only stages derived from the required Node 22 base image, including the final runner', () => {
+  const dockerfile = readDockerfile();
+  const stages = parseDockerStages(dockerfile);
+
+  assert.ok(stages.length > 0, 'Expected Dockerfile to define at least one build stage.');
+  assertNodeDerivedStages(stages);
+  assert.ok(
+    stages.some((stage) => stage.base === 'node:22-bookworm-slim'),
+    'Expected Dockerfile to reference node:22-bookworm-slim directly.',
+  );
 });
 
 test('Dockerfile enables Corepack and pins pnpm 11.18.0', () => {
