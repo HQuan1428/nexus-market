@@ -124,7 +124,7 @@ after its corresponding implementation commit is complete.
 
 ### Task 7 — T007 Final-runner ownership
 
-- [ ] T007 Apply `node` ownership to final-runner copied runtime inputs and protect it with a regression assertion per plan: application image ownership decision (partial)
+- [x] T007 Apply `node` ownership to final-runner copied runtime inputs and protect it with a regression assertion per plan: application image ownership decision (partial)
 
 ### Task 8 — T008 Bounded healthcheck timing
 
