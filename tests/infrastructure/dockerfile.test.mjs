@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDirectory, '..', '..');
 const dockerfilePath = path.join(repoRoot, 'Dockerfile');
+const dockerignorePath = path.join(repoRoot, '.dockerignore');
 
 function readDockerfile() {
   assert.ok(
@@ -15,6 +16,15 @@ function readDockerfile() {
   );
 
   return fs.readFileSync(dockerfilePath, 'utf8');
+}
+
+function readDockerignore() {
+  assert.ok(
+    fs.existsSync(dockerignorePath),
+    'Expected .dockerignore to exist at the repository root.',
+  );
+
+  return fs.readFileSync(dockerignorePath, 'utf8');
 }
 
 function parseDockerStages(dockerfile) {
@@ -106,4 +116,42 @@ test('Dockerfile prevents pnpm from mutating dependencies when the non-root runn
     /^ENV[ \t]+PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false[ \t]*$/m,
     'Expected the immutable runner to disable pnpm dependency auto-install before pnpm start.',
   );
+});
+
+test('Dockerfile switches the effective final runner to the unprivileged node user before startup', () => {
+  const dockerfile = readDockerfile();
+  const stages = parseDockerStages(dockerfile);
+  const runnerStage = getDockerStage(dockerfile, 'runner');
+
+  assert.equal(
+    stages.at(-1)?.alias,
+    'runner',
+    'Expected the runner stage to be the effective final Dockerfile stage.',
+  );
+
+  const userInstruction = runnerStage.match(/^USER[ \t]+([^\s#]+)[ \t]*$/im);
+  const startupInstruction = runnerStage.match(/^(CMD|ENTRYPOINT)\b/im);
+  assert.equal(userInstruction?.[1], 'node', 'Expected the runner to use USER node.');
+  assert.ok(startupInstruction, 'Expected the runner to define a startup instruction.');
+  assert.ok(
+    userInstruction && startupInstruction && userInstruction.index < startupInstruction.index,
+    'Expected USER node to be applied before the application starts.',
+  );
+});
+
+test('real .dockerignore excludes secrets, dependencies, build output, Git metadata, and local worktrees', () => {
+  const dockerignore = readDockerignore();
+  const exclusions = new Set(
+    dockerignore
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith('#')),
+  );
+
+  for (const requiredExclusion of ['.env*', 'node_modules', '.next', '.git', '.worktrees']) {
+    assert.ok(
+      exclusions.has(requiredExclusion),
+      `Expected .dockerignore to exclude ${requiredExclusion}.`,
+    );
+  }
 });
