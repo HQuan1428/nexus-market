@@ -76,7 +76,21 @@ function assertNamedVolumeMount(service, serviceName, expectedVolumeName) {
   );
 }
 
-function assertFiniteHealthcheck(service, serviceName, { allowStartPeriod = false } = {}) {
+function durationToMilliseconds(value, fieldName, serviceName) {
+  const match = String(value).match(/^(\d+)(ms|s|m|h)$/);
+  assert.ok(match, `Expected ${serviceName} healthcheck ${fieldName} to be finite.`);
+
+  const [, amount, unit] = match;
+  const multipliers = { ms: 1, s: 1_000, m: 60_000, h: 3_600_000 };
+  const milliseconds = Number(amount) * multipliers[unit];
+  assert.ok(
+    Number.isFinite(milliseconds),
+    `Expected ${serviceName} healthcheck ${fieldName} to be finite.`,
+  );
+  return milliseconds;
+}
+
+function assertFiniteHealthcheck(service, serviceName) {
   assert.ok(service.healthcheck, `Expected ${serviceName} to define a healthcheck.`);
 
   for (const fieldName of expectedHealthcheckFields) {
@@ -86,32 +100,29 @@ function assertFiniteHealthcheck(service, serviceName, { allowStartPeriod = fals
     );
   }
 
-  assert.match(
-    String(service.healthcheck.interval),
-    /^\d+(ms|s|m|h)$/,
-    `Expected ${serviceName} healthcheck interval to be finite.`,
+  const intervalMilliseconds = durationToMilliseconds(
+    service.healthcheck.interval,
+    'interval',
+    serviceName,
   );
-  assert.match(
-    String(service.healthcheck.timeout),
-    /^\d+(ms|s|m|h)$/,
-    `Expected ${serviceName} healthcheck timeout to be finite.`,
+  assert.ok(
+    intervalMilliseconds <= 10_000,
+    `Expected ${serviceName} healthcheck interval to be no greater than 10 seconds.`,
   );
+  durationToMilliseconds(service.healthcheck.timeout, 'timeout', serviceName);
   assert.ok(
     Number.isInteger(service.healthcheck.retries) && service.healthcheck.retries > 0,
     `Expected ${serviceName} healthcheck retries to be a positive integer.`,
   );
 
-  if (allowStartPeriod || service.healthcheck.start_period !== undefined) {
-    assert.ok(
-      service.healthcheck.start_period !== undefined,
-      `Expected ${serviceName} healthcheck start_period to be defined when used.`,
-    );
-    assert.match(
-      String(service.healthcheck.start_period),
-      /^\d+(ms|s|m|h)$/,
-      `Expected ${serviceName} healthcheck start_period to be finite.`,
-    );
-  }
+  assert.ok(
+    service.healthcheck.start_period !== undefined,
+    `Expected ${serviceName} healthcheck start_period to be defined.`,
+  );
+  assert.ok(
+    durationToMilliseconds(service.healthcheck.start_period, 'start_period', serviceName) > 0,
+    `Expected ${serviceName} healthcheck start_period to be positive.`,
+  );
 }
 
 test('Compose defines exactly the required five services on the explicit nexus_network bridge', () => {
@@ -151,10 +162,10 @@ test('Compose uses the mandated images, persistence, and health-aware dependenci
   assertNoVolumes(adminer, 'adminer');
   assertNoVolumes(redis, 'redis');
 
-  assertFiniteHealthcheck(app, 'app', { allowStartPeriod: true });
-  assertFiniteHealthcheck(postgres, 'postgres', { allowStartPeriod: true });
+  assertFiniteHealthcheck(app, 'app');
+  assertFiniteHealthcheck(postgres, 'postgres');
   assertFiniteHealthcheck(redis, 'redis');
-  assertFiniteHealthcheck(minio, 'minio', { allowStartPeriod: true });
+  assertFiniteHealthcheck(minio, 'minio');
   assertFiniteHealthcheck(adminer, 'adminer');
 
   assert.equal(app.depends_on?.postgres?.condition, 'service_healthy');

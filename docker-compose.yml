@@ -23,7 +23,7 @@ services:
         - node
         - -e
         - fetch('http://127.0.0.1:3000/').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))
-      interval: 30s
+      interval: 10s
       timeout: 10s
       retries: 5
       start_period: 30s
@@ -65,6 +65,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 5s
     networks:
       - nexus_network
 
@@ -107,9 +108,10 @@ services:
         - php
         - -r
         - $$s=@fsockopen('127.0.0.1',8080); exit($$s?0:1);
-      interval: 30s
+      interval: 10s
       timeout: 10s
       retries: 5
+      start_period: 10s
     networks:
       - nexus_network
 
