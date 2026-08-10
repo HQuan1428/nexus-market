@@ -136,4 +136,4 @@ after its corresponding implementation commit is complete.
 
 ### Task 10 — T010 Environment contract coverage
 
-- [ ] T010 Table-drive missing-variable validation one variable at a time and enforce non-secret placeholders plus `.env`/`.env.example` ignore behavior in `tests/infrastructure/environment.test.mjs` per T004, FR-009, FR-011, SC-003, and SC-005 (partial)
+- [x] T010 Table-drive missing-variable validation one variable at a time and enforce non-secret placeholders plus `.env`/`.env.example` ignore behavior in `tests/infrastructure/environment.test.mjs` per T004, FR-009, FR-011, SC-003, and SC-005 (partial)
