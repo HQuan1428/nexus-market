@@ -115,3 +115,25 @@ after its corresponding implementation commit is complete.
 | FR-010 | T001, T002, T005 |
 | SC-001–SC-003, SC-005 | T001, T003, T004, T005 |
 | SC-004, SC-006 | T002, T003, T005 |
+
+## Phase 5: Convergence
+
+### Task 6 — T006 Dockerfile runtime contract coverage
+
+- [ ] T006 Add focused Dockerfile contract coverage for the final `USER node` runtime and required `.dockerignore` exclusions per T001, T002, and FR-010 (partial)
+
+### Task 7 — T007 Final-runner ownership
+
+- [ ] T007 Apply `node` ownership to final-runner copied runtime inputs and protect it with a regression assertion per plan: application image ownership decision (partial)
+
+### Task 8 — T008 Bounded healthcheck timing
+
+- [ ] T008 Make every Compose healthcheck use an interval of at most 10 seconds and a finite `start_period`, then enforce both constraints in `tests/infrastructure/docker-compose.test.mjs` per plan: healthcheck decision (partial)
+
+### Task 9 — T009 Compose runtime contract coverage
+
+- [ ] T009 Extend `tests/infrastructure/docker-compose.test.mjs` to enforce exact published ports, `unless-stopped` restart policies, and explicit runtime network/volume names per T001, T003, FR-001–FR-007, FR-013, and FR-014 (partial)
+
+### Task 10 — T010 Environment contract coverage
+
+- [ ] T010 Table-drive missing-variable validation one variable at a time and enforce non-secret placeholders plus `.env`/`.env.example` ignore behavior in `tests/infrastructure/environment.test.mjs` per T004, FR-009, FR-011, SC-003, and SC-005 (partial)
