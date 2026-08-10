@@ -12,11 +12,11 @@ const envExamplePath = path.join(repoRoot, '.env.example');
 const expectedServiceNames = ['adminer', 'app', 'minio', 'postgres', 'redis'];
 const expectedHealthcheckFields = ['test', 'interval', 'timeout', 'retries'];
 const expectedPublishedPorts = {
-  adminer: ['8080:8080'],
-  app: ['3000:3000'],
-  minio: ['9000:9000', '9001:9001'],
-  postgres: ['5432:5432'],
-  redis: ['6379:6379'],
+  adminer: ['127.0.0.1:8080:8080/tcp'],
+  app: ['127.0.0.1:3000:3000/tcp'],
+  minio: ['127.0.0.1:9000:9000/tcp', '127.0.0.1:9001:9001/tcp'],
+  postgres: ['127.0.0.1:5432:5432/tcp'],
+  redis: ['127.0.0.1:6379:6379/tcp'],
 };
 
 function requireComposeFile() {
@@ -66,7 +66,7 @@ function assertNoVolumes(service, serviceName) {
   assert.deepEqual(volumes, [], `Expected ${serviceName} to avoid mounting volumes.`);
 }
 
-function assertNamedVolumeMount(service, serviceName, expectedVolumeName) {
+function assertNamedVolumeMount(service, serviceName, expectedVolumeName, expectedTarget) {
   const volumes = service.volumes ?? [];
   assert.equal(volumes.length, 1, `Expected ${serviceName} to mount exactly one named volume.`);
 
@@ -81,10 +81,25 @@ function assertNamedVolumeMount(service, serviceName, expectedVolumeName) {
     expectedVolumeName,
     `Expected ${serviceName} to use the ${expectedVolumeName} runtime volume name.`,
   );
+  assert.equal(
+    mount.target,
+    expectedTarget,
+    `Expected ${serviceName} to mount ${expectedVolumeName} at ${expectedTarget}.`,
+  );
 }
 
 function normalizedPublishedPorts(service) {
-  return (service.ports ?? []).map((port) => `${port.published}:${port.target}/${port.protocol}`);
+  return (service.ports ?? [])
+    .map((port) => `${port.host_ip}:${port.published}:${port.target}/${port.protocol}`)
+    .sort();
+}
+
+function assertHealthcheckCommand(service, serviceName, expectedCommand) {
+  assert.deepEqual(
+    service.healthcheck?.test,
+    expectedCommand,
+    `Expected ${serviceName} to use the approved healthcheck command.`,
+  );
 }
 
 function durationToMilliseconds(value, fieldName, serviceName) {
@@ -163,21 +178,41 @@ test('Compose uses the mandated images, persistence, and health-aware dependenci
   assert.equal(adminer.image, 'adminer');
 
   assert.ok(app.build, 'Expected app service to build from the local Dockerfile.');
+  assert.equal(app.build.context, repoRoot);
+  assert.equal(app.build.dockerfile, 'Dockerfile');
   assert.deepEqual(
     Object.keys(model.volumes ?? {}).sort(),
     ['nexus_minio_data', 'nexus_postgres_data'],
   );
-  assertNamedVolumeMount(postgres, 'postgres', 'nexus_postgres_data');
-  assertNamedVolumeMount(minio, 'minio', 'nexus_minio_data');
+  assertNamedVolumeMount(postgres, 'postgres', 'nexus_postgres_data', '/var/lib/postgresql/data');
+  assertNamedVolumeMount(minio, 'minio', 'nexus_minio_data', '/data');
   assertNoVolumes(app, 'app');
   assertNoVolumes(adminer, 'adminer');
   assertNoVolumes(redis, 'redis');
 
   assertFiniteHealthcheck(app, 'app');
+  assertHealthcheckCommand(app, 'app', [
+    'CMD',
+    'node',
+    '-e',
+    "fetch('http://127.0.0.1:3000/').then((response) => { if (!response.ok) process.exit(1); }).catch(() => process.exit(1))",
+  ]);
   assertFiniteHealthcheck(postgres, 'postgres');
+  assertHealthcheckCommand(postgres, 'postgres', [
+    'CMD-SHELL',
+    'pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"',
+  ]);
   assertFiniteHealthcheck(redis, 'redis');
+  assertHealthcheckCommand(redis, 'redis', ['CMD', 'redis-cli', 'ping']);
   assertFiniteHealthcheck(minio, 'minio');
+  assertHealthcheckCommand(minio, 'minio', ['CMD-SHELL', 'mc ready local']);
   assertFiniteHealthcheck(adminer, 'adminer');
+  assertHealthcheckCommand(adminer, 'adminer', [
+    'CMD',
+    'php',
+    '-r',
+    "$$s=@fsockopen('127.0.0.1',8080); exit($$s?0:1);",
+  ]);
 
   assert.equal(app.depends_on?.postgres?.condition, 'service_healthy');
   assert.equal(app.depends_on?.redis?.condition, 'service_healthy');
@@ -188,17 +223,36 @@ test('Compose uses the mandated images, persistence, and health-aware dependenci
   assert.equal(postgres.depends_on, undefined);
   assert.equal(redis.depends_on, undefined);
   assert.equal(minio.depends_on, undefined);
+
+  assert.deepEqual(minio.command, ['server', '/data', '--console-address', ':9001']);
+  assert.equal(adminer.environment?.ADMINER_DEFAULT_SERVER, 'postgres');
 });
 
-test('Compose publishes exactly the required TCP ports', () => {
+test('Compose gives the app stable internal dependency configuration without raw URL interpolation', () => {
+  const model = loadComposeModel();
+  const appEnvironment = serviceByName(model, 'app').environment ?? {};
+
+  assert.equal(appEnvironment.POSTGRES_HOST, 'postgres');
+  assert.equal(appEnvironment.POSTGRES_PORT, '5432');
+  assert.equal(appEnvironment.POSTGRES_DB, 'replace_me_local_only_postgres_db');
+  assert.equal(appEnvironment.POSTGRES_USER, 'replace_me_local_only_postgres_user');
+  assert.equal(appEnvironment.POSTGRES_PASSWORD, 'replace_me_local_only_postgres_password');
+  assert.equal(appEnvironment.REDIS_URL, 'redis://redis:6379');
+  assert.equal(appEnvironment.S3_ENDPOINT, 'http://minio:9000');
+  assert.equal(appEnvironment.S3_ACCESS_KEY, 'replace_me_local_only_minio_user');
+  assert.equal(appEnvironment.S3_SECRET_KEY, 'replace_me_local_only_minio_password');
+  assert.equal(appEnvironment.DATABASE_URL, undefined);
+});
+
+test('Compose publishes exactly the required localhost TCP ports', () => {
   const model = loadComposeModel();
 
   for (const [serviceName, expectedPorts] of Object.entries(expectedPublishedPorts)) {
     const actualPorts = normalizedPublishedPorts(serviceByName(model, serviceName));
     assert.deepEqual(
       actualPorts,
-      expectedPorts.map((port) => `${port}/tcp`),
-      `Expected ${serviceName} to publish exactly ${expectedPorts.join(', ')} over TCP.`,
+      [...expectedPorts].sort(),
+      `Expected ${serviceName} to publish exactly ${expectedPorts.join(', ')}.`,
     );
   }
 });

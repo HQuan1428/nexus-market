@@ -30,8 +30,8 @@ infrastructure
 **Performance Goals**: Compose structural validation completes in under 30
 seconds; healthchecks use intervals of at most 10 seconds and bounded retries
 **Constraints**: Exactly five services; required secrets have no fallback;
-application runs as non-root; ports 3000, 5432, 6379, 8080, 9000, and 9001;
-single network named `nexus_network`
+application runs as non-root; host ports 3000, 5432, 6379, 8080, 9000, and
+9001 bind to `127.0.0.1`; single network named `nexus_network`
 **Scale/Scope**: One local application instance and one instance of each of four
 development infrastructure components
 
@@ -122,6 +122,7 @@ is added for operational configuration.
 - Define exactly `app`, `postgres`, `redis`, `minio`, and `adminer`.
 - Put every service on a bridge network whose explicit runtime name is
   `nexus_network`.
+- Bind every published port to `127.0.0.1` for local-only access.
 - Use named volumes `nexus_postgres_data` and `nexus_minio_data`; do not create
   a Redis volume.
 - Gate application startup on healthy PostgreSQL, Redis, and MinIO; gate Adminer
@@ -135,8 +136,10 @@ is added for operational configuration.
 
 - Require `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`,
   `MINIO_ROOT_USER`, and `MINIO_ROOT_PASSWORD` with `${VAR:?message}`.
-- Pass stable internal URLs to the app: database host `postgres`, Redis host
-  `redis`, and S3-compatible endpoint `http://minio:9000`.
+- Pass stable internal configuration to the app: database host `postgres`,
+  database port `5432`, Redis URL `redis://redis:6379`, and S3-compatible
+  endpoint `http://minio:9000`. Database credentials remain separate variables
+  so URL encoding belongs to the app layer that consumes them.
 - Document variables in `.env.example` with unmistakable placeholders and add
   `!.env.example` after the existing `.env*` ignore rule.
 - Exclude `.env*`, dependency/build outputs, Git metadata, and local worktrees

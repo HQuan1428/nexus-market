@@ -80,6 +80,7 @@ setting.
 - **FR-012**: The database component MUST support the project's approved vector-search extension without treating similarity results as authorization or verified product truth.
 - **FR-013**: The object store MUST expose both its application interface and its local administration console on documented ports.
 - **FR-014**: The local stack MUST use stable internal component names so the application can address dependencies without host-specific network configuration.
+- **FR-015**: Published host ports MUST bind only to the loopback interface so local development services are not exposed on external network interfaces.
 
 ## Success Criteria *(mandatory)*
 
@@ -96,8 +97,8 @@ setting.
 
 - The stack targets local development and evaluation, not a production-grade
   distributed deployment.
-- Developers have a recent Docker Engine with Compose v2 and ports 3000, 5432,
-  6379, 8080, 9000, and 9001 available.
+- Developers have a recent Docker Engine with Compose v2 and localhost ports
+  3000, 5432, 6379, 8080, 9000, and 9001 available.
 - The existing Next.js application and pnpm lockfile are the application source
   for the image build.
 - Creating database schemas, enabling the vector extension inside an individual

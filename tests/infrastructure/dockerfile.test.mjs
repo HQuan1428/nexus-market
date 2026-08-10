@@ -100,11 +100,15 @@ test('Dockerfile enables Corepack and pins pnpm 11.18.0', () => {
 
 test('Dockerfile installs dependencies with frozen lockfile, builds, and starts the app', () => {
   const dockerfile = readDockerfile();
+  const runnerStage = getDockerStage(dockerfile, 'runner');
 
   assert.match(dockerfile, /pnpm\s+install\s+--frozen-lockfile/i);
   assert.match(dockerfile, /pnpm\s+build/i);
-  assert.match(dockerfile, /(CMD|ENTRYPOINT)\s+\[?"?pnpm"?/i);
-  assert.match(dockerfile, /(CMD|ENTRYPOINT)[^\n]*"?start"?/i);
+  assert.match(
+    runnerStage,
+    /^CMD\s+\["pnpm",\s*"start"\][ \t]*$/m,
+    'Expected the final runner to start the production app with pnpm start.',
+  );
 });
 
 test('Dockerfile prevents pnpm from mutating dependencies when the non-root runner starts', () => {

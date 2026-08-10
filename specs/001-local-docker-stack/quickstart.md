@@ -24,18 +24,19 @@ Required variables:
 
 ```bash
 pnpm test:infra
-docker compose config --quiet
+docker compose --env-file .env config --quiet
 pnpm lint
 pnpm build
 ```
 
-Expected result: all commands exit 0. Running `docker compose config --quiet`
-without any required variable must fail and identify the missing variable.
+Expected result: all commands exit 0. Running
+`docker compose --env-file .env config --quiet` without any required variable
+must fail and identify the missing variable.
 
 ## Image verification
 
 ```bash
-docker compose build app
+docker compose --env-file .env build app
 ```
 
 Expected result: dependencies install from `pnpm-lock.yaml`, the Next.js
@@ -45,8 +46,8 @@ non-root user.
 ## Runtime verification
 
 ```bash
-docker compose up -d
-docker compose ps
+docker compose --env-file .env up -d --wait --wait-timeout 120
+docker compose --env-file .env ps
 ```
 
 Expected result: five services are present. PostgreSQL, Redis, MinIO, Adminer,
@@ -54,17 +55,17 @@ and the application transition to healthy after their bounded startup periods.
 
 Local endpoints:
 
-- Application: `http://localhost:3000`
-- PostgreSQL: `localhost:5432`
-- Redis: `localhost:6379`
-- Adminer: `http://localhost:8080`
-- MinIO API: `http://localhost:9000`
-- MinIO Console: `http://localhost:9001`
+- Application: `http://127.0.0.1:3000`
+- PostgreSQL: `127.0.0.1:5432`
+- Redis: `127.0.0.1:6379`
+- Adminer: `http://127.0.0.1:8080`
+- MinIO API: `http://127.0.0.1:9000`
+- MinIO Console: `http://127.0.0.1:9001`
 
 ## Stop without deleting durable data
 
 ```bash
-docker compose down
+docker compose --env-file .env down
 ```
 
 Named PostgreSQL and MinIO volumes remain. Volume deletion is intentionally not

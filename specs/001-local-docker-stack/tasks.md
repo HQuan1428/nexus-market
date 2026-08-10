@@ -18,6 +18,7 @@
 - Attach all services to an explicitly named bridge network `nexus_network`.
 - Persist only PostgreSQL and MinIO through named volumes with runtime names
   `nexus_postgres_data` and `nexus_minio_data`; Redis remains volume-free.
+- Bind published host ports only to `127.0.0.1`.
 - Every service has a finite healthcheck. Application startup waits for healthy
   PostgreSQL, Redis, and MinIO; Adminer waits only for healthy PostgreSQL.
 - Follow RED → GREEN → REFACTOR and record the command/output evidence for each
@@ -110,7 +111,7 @@ after its corresponding implementation commit is complete.
 
 | Requirement | Tasks |
 |---|---|
-| FR-001–FR-007, FR-012–FR-014 | T001, T003, T005 |
+| FR-001–FR-007, FR-012–FR-015 | T001, T003, T005 |
 | FR-008, FR-009, FR-011 | T001, T004, T005 |
 | FR-010 | T001, T002, T005 |
 | SC-001–SC-003, SC-005 | T001, T003, T004, T005 |

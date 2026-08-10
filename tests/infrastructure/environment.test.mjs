@@ -70,7 +70,7 @@ test('The example environment file documents every required non-secret placehold
   }
 });
 
-test('Compose source uses fail-closed required substitutions for every secret-bearing variable', () => {
+test('Compose source uses fail-closed required substitutions for every required local variable', () => {
   if (!fs.existsSync(envExamplePath) || !fs.existsSync(composePath)) {
     test.skip('Compose source validation starts once both .env.example and docker-compose.yml exist.');
     return;
