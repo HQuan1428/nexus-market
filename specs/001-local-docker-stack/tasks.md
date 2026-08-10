@@ -120,7 +120,7 @@ after its corresponding implementation commit is complete.
 
 ### Task 6 — T006 Dockerfile runtime contract coverage
 
-- [ ] T006 Add focused Dockerfile contract coverage for the final `USER node` runtime and required `.dockerignore` exclusions per T001, T002, and FR-010 (partial)
+- [x] T006 Add focused Dockerfile contract coverage for the final `USER node` runtime and required `.dockerignore` exclusions per T001, T002, and FR-010 (partial)
 
 ### Task 7 — T007 Final-runner ownership
 
