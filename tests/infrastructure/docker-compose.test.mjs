@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDirectory, '..', '..');
 const composePath = path.join(repoRoot, 'docker-compose.yml');
+const envExamplePath = path.join(repoRoot, '.env.example');
 const expectedServiceNames = ['adminer', 'app', 'minio', 'postgres', 'redis'];
 const expectedHealthcheckFields = ['test', 'interval', 'timeout', 'retries'];
 
@@ -16,6 +17,10 @@ function requireComposeFile() {
     fs.existsSync(composePath),
     'Expected docker-compose.yml to exist at the repository root.',
   );
+  assert.ok(
+    fs.existsSync(envExamplePath),
+    'Expected .env.example to exist at the repository root.',
+  );
 }
 
 function loadComposeModel() {
@@ -23,7 +28,7 @@ function loadComposeModel() {
 
   const command = spawnSync(
     'docker',
-    ['compose', '-f', composePath, 'config', '--format', 'json'],
+    ['compose', '--env-file', envExamplePath, '-f', composePath, 'config', '--format', 'json'],
     {
       cwd: repoRoot,
       encoding: 'utf8',
