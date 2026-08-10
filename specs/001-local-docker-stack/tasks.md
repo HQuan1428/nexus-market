@@ -74,7 +74,7 @@
 
 ### Task 5 — T005 End-to-end verification
 
-- [ ] T005 Run `pnpm test:infra`, `docker compose --env-file .env.example config --quiet`, `docker compose --env-file .env.example build app`, `pnpm lint`, and `pnpm build`; if local ports are available, run `docker compose --env-file .env.example up -d --wait` followed by `docker compose down`; compare results with `specs/001-local-docker-stack/quickstart.md` and update only incorrect validation instructions
+- [ ] T005 Run `pnpm test:infra`, `docker compose --env-file .env.example config --quiet`, `docker compose --env-file .env.example build app`, `pnpm lint`, and `pnpm build`; if local ports are available, run `docker compose --env-file .env.example up -d --wait`, create PostgreSQL and MinIO sentinel data, force-recreate those two containers without deleting named volumes, verify both sentinels remain, clean only the sentinels, then run `docker compose down`; compare results with `specs/001-local-docker-stack/quickstart.md` and update only incorrect validation instructions
 
 ---
 
