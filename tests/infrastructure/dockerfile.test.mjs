@@ -129,12 +129,25 @@ test('Dockerfile switches the effective final runner to the unprivileged node us
     'Expected the runner stage to be the effective final Dockerfile stage.',
   );
 
-  const userInstruction = runnerStage.match(/^USER[ \t]+([^\s#]+)[ \t]*$/im);
-  const startupInstruction = runnerStage.match(/^(CMD|ENTRYPOINT)\b/im);
-  assert.equal(userInstruction?.[1], 'node', 'Expected the runner to use USER node.');
-  assert.ok(startupInstruction, 'Expected the runner to define a startup instruction.');
+  const instructions = runnerStage
+    .split(/\r?\n/)
+    .map((line, index) => ({ line: line.trim(), index }))
+    .filter(({ line }) => line && !line.startsWith('#'));
+  const startupInstructions = instructions.filter(({ line }) => /^(CMD|ENTRYPOINT)\b/i.test(line));
+  const effectiveStartup = startupInstructions.at(-1);
+  const applicableUsers = instructions.filter(
+    ({ line, index }) => /^USER\b/i.test(line) && effectiveStartup && index < effectiveStartup.index,
+  );
+  const effectiveUser = applicableUsers.at(-1);
+
+  assert.ok(effectiveStartup, 'Expected the runner to define a startup instruction.');
+  assert.equal(
+    effectiveUser?.line,
+    'USER node',
+    'Expected the effective user immediately before startup to be USER node.',
+  );
   assert.ok(
-    userInstruction && startupInstruction && userInstruction.index < startupInstruction.index,
+    effectiveUser && effectiveUser.index < effectiveStartup.index,
     'Expected USER node to be applied before the application starts.',
   );
 });
