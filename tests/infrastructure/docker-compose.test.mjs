@@ -11,6 +11,13 @@ const composePath = path.join(repoRoot, 'docker-compose.yml');
 const envExamplePath = path.join(repoRoot, '.env.example');
 const expectedServiceNames = ['adminer', 'app', 'minio', 'postgres', 'redis'];
 const expectedHealthcheckFields = ['test', 'interval', 'timeout', 'retries'];
+const expectedPublishedPorts = {
+  adminer: ['8080:8080'],
+  app: ['3000:3000'],
+  minio: ['9000:9000', '9001:9001'],
+  postgres: ['5432:5432'],
+  redis: ['6379:6379'],
+};
 
 function requireComposeFile() {
   assert.ok(
@@ -74,6 +81,10 @@ function assertNamedVolumeMount(service, serviceName, expectedVolumeName) {
     expectedVolumeName,
     `Expected ${serviceName} to use the ${expectedVolumeName} runtime volume name.`,
   );
+}
+
+function normalizedPublishedPorts(service) {
+  return (service.ports ?? []).map((port) => `${port.published}:${port.target}/${port.protocol}`);
 }
 
 function durationToMilliseconds(value, fieldName, serviceName) {
@@ -177,4 +188,46 @@ test('Compose uses the mandated images, persistence, and health-aware dependenci
   assert.equal(postgres.depends_on, undefined);
   assert.equal(redis.depends_on, undefined);
   assert.equal(minio.depends_on, undefined);
+});
+
+test('Compose publishes exactly the required TCP ports', () => {
+  const model = loadComposeModel();
+
+  for (const [serviceName, expectedPorts] of Object.entries(expectedPublishedPorts)) {
+    const actualPorts = normalizedPublishedPorts(serviceByName(model, serviceName));
+    assert.deepEqual(
+      actualPorts,
+      expectedPorts.map((port) => `${port}/tcp`),
+      `Expected ${serviceName} to publish exactly ${expectedPorts.join(', ')} over TCP.`,
+    );
+  }
+});
+
+test('Compose applies unless-stopped restart policy to exactly all five services', () => {
+  const model = loadComposeModel();
+
+  assert.deepEqual(Object.keys(model.services ?? {}).sort(), expectedServiceNames);
+  for (const serviceName of expectedServiceNames) {
+    assert.equal(
+      serviceByName(model, serviceName).restart,
+      'unless-stopped',
+      `Expected ${serviceName} to use the unless-stopped restart policy.`,
+    );
+  }
+});
+
+test('Compose assigns explicit runtime names to the bridge network and named volumes', () => {
+  const model = loadComposeModel();
+
+  assert.equal(model.networks?.nexus_network?.name, 'nexus_network');
+  assert.deepEqual(
+    Object.fromEntries(
+      Object.entries(model.volumes ?? {}).map(([volumeKey, volume]) => [volumeKey, volume.name]),
+    ),
+    {
+      nexus_minio_data: 'nexus_minio_data',
+      nexus_postgres_data: 'nexus_postgres_data',
+    },
+  );
+  assertNoVolumes(serviceByName(model, 'redis'), 'redis');
 });
