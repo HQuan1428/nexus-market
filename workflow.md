@@ -1,5 +1,5 @@
-# AGENT WORKFLOW — Spec Kit × Superpowers
-
+# AGENT WORKFLOW 
+---
 
 ## 0. Triết lý thiết kế (đọc trước khi làm bất cứ điều gì)
 
@@ -77,10 +77,35 @@ VII. ĐỊNH TUYẾN THEO ĐỘ LỚN
    - Mọi công việc phải được phân cấp 0/1/2/3 trước khi bắt đầu.
    - Tầng đặc tả co giãn theo cấp; tầng thực thi (điều II, III)
      là HẰNG SỐ ở mọi cấp — không có ngoại lệ.
-   - Nghi ngờ giữa 2 cấp → HỎI NGƯỜI DÙNG, không tự đoán. Chỉ khi agent
-     chạy autonomous/background không có ai để hỏi thì mới fallback về
-     chọn cấp cao hơn.
+   - Nghi ngờ giữa 2 cấp → chọn cấp cao hơn.
    - Việc phình to giữa chừng → DỪNG, thăng cấp, viết spec.
+
+VIII. CHECKPOINT XÁC NHẬN (human-in-the-loop theo ranh giới PHASE)
+   - Kết thúc mỗi phase: agent DỪNG, trình bày (1) artifact vừa tạo,
+     (2) trạng thái DoD, (3) các điểm cần người dùng quyết định —
+     rồi chờ xác nhận tường minh mới sang phase kế.
+   - Im lặng hoặc trả lời mơ hồ ≠ đồng ý. Chỉ xác nhận tường minh
+     ("approved" / "tiếp tục") mới được đi tiếp.
+   - Xác nhận theo PHASE, không theo TASK: bên trong Phase 5,
+     subagent chạy liên tục với review tự động 2 tầng — không dừng
+     chờ người dùng sau từng task (ngoại lệ duy nhất: phát hiện
+     spec sai → DỪNG và hỏi, theo điều I).
+   - Mật độ checkpoint co giãn theo cấp định tuyến:
+     Cấp 3: mọi ranh giới phase | Cấp 2: trước code + trước merge
+     Cấp 1: trước merge         | Cấp 0: không cần
+
+IX. QUYỀN TỐI CAO CỦA DEV (override chẩn đoán của AI)
+   - Chẩn đoán cấp của AI chỉ là ĐỀ XUẤT. Quyết định cuối thuộc về Dev.
+   - HẠ cấp: phải kèm lý do trỏ tới sự thật kiểm chứng được trong
+     codebase (helper/pattern/convention đã tồn tại). Đây là sửa lỗi
+     "AI chẩn đoán sai vì thiếu bối cảnh", hợp lệ.
+     Ví dụ: "Override: xuống Cấp 2 vì module X đã có Helper Y xử lý việc này."
+   - NÂNG cấp: luôn được, không cần lý do (nghiêng về phía an toàn).
+   - GIỚI HẠN CỨNG: override chỉ dịch chuyển TẦNG ĐẶC TẢ (bỏ bớt gate
+     spec). KHÔNG override được TẦNG THỰC THI — điều II (TDD) và III
+     (bằng chứng) là hằng số, không mệnh lệnh nào bỏ được.
+   - Override phải để lại dấu vết trong PR/commit (lý do + ai quyết),
+     để khi task hỏng về sau còn truy được nguồn gốc.
 ```
 
 Constitution commit vào `.specify/memory/constitution.md`, **review qua PR như code**. Đây là cơ chế để cả team — bất kể dùng agent nào — chịu chung một bộ luật.
@@ -104,12 +129,18 @@ Workflow full-gate chỉ dành cho vấn đề lớn. Áp nó cho bug fix 5 dòn
 |---|---|---|---|
 | **0 — Trivial** | Typo, comment, docs, format, rename nội bộ. **Không đổi hành vi.** | Bỏ hoàn toàn | Test suite hiện có phải vẫn xanh |
 | **1 — Bug fix / vá nhỏ** | Hành vi đã có spec, sửa 1 chỗ, không mơ hồ | Bỏ chuỗi artifact. Bug do spec sai → sửa `spec.md` ngay trong cùng PR (1 dòng, không chạy lại chuỗi) | **Đầy đủ:** `systematic-debugging` → regression test FAIL (RED) → fix tối thiểu (GREEN) → refactor → review. Bằng chứng bắt buộc |
-| **2 — Feature nhỏ** | 1 module, ít mơ hồ, ~1 ngày | **Lean:** `/speckit.specify → /speckit.plan → /speckit.tasks` (bỏ clarify/checklist/analyze; gộp PR-spec + PR-code làm 1) | Đầy đủ: subagent + TDD + review 2 tầng |
-| **3 — Feature lớn** | Nhiều module, có mơ hồ, production-critical | **Full:** toàn bộ vòng đời ở mục 3 với đủ 5 gate | Đầy đủ |
+| **2 — Feature nhỏ** | 1 module; mọi quyết định thiết kế đều đã có câu trả lời trong spec/convention (không phải tự nghĩ ra) | **Lean:** `/speckit.specify → /speckit.plan → /speckit.tasks` (bỏ clarify/checklist/analyze; gộp PR-spec + PR-code làm 1) | Đầy đủ: subagent + TDD + review 2 tầng |
+| **3 — Feature lớn** | Nhiều module; HOẶC có ít nhất 1 quyết định thiết kế mà câu trả lời chưa nằm sẵn ở đâu (hai kỹ sư có thể chọn khác nhau → ra hai sản phẩm khác nhau); production-critical | **Full:** toàn bộ vòng đời ở mục 3 với đủ 5 gate | Đầy đủ |
 
 ### Luật chống lách cấp
 
-- **Nghi ngờ giữa 2 cấp → hỏi người dùng 1 câu ngắn** ("Việc này chạm module X và Y, mình đi Cấp 2 hay 3?") thay vì tự đoán — chi phí hỏi gần như bằng 0 so với chi phí thiếu một spec. Chỉ khi không có ai để hỏi (agent chạy autonomous/background) mới fallback về chọn cấp cao hơn.
+- **Định tuyến bằng bản chất, không bằng thời lượng.** Ranh giới Cấp 2 ↔ Cấp 3 là *số module + có hay không quyết định thiết kế chưa được trả lời sẵn*, không phải "mất bao lâu". Thời gian phụ thuộc người làm nên không đo được khách quan; một task 1 module dù mất 2 ngày vẫn là Cấp 2.
+- **Phép thử quyết định thiết kế (trả lời yes/no):** *"Có quyết định nào mà câu trả lời KHÔNG nằm sẵn trong spec/tài liệu/convention hiện có, và nếu hai kỹ sư chọn khác nhau thì cho ra hai sản phẩm khác nhau không?"* — Có → Cấp 3. Không → Cấp 2.
+  - Ví dụ **CÓ** (→ Cấp 3): "API này gặp request chưa xác thực thì trả 401 hay 403?" khi chưa tài liệu nào quy định.
+  - Ví dụ **KHÔNG** (→ vẫn Cấp 2): "đặt tên biến `userId` hay `uid`?" — convention đã có, hoặc chọn sao cũng không đổi hành vi.
+- **Dấu hiệu thăng cấp giữa chừng:** chạm module thứ hai, HOẶC phép thử trên chuyển từ "Không" sang "Có".
+- **Dev override chẩn đoán của AI (điều IX).** Chẩn đoán cấp của AI chỉ là đề xuất. Dev *hạ cấp* được nếu kèm lý do trỏ tới sự thật kiểm chứng được ("module X đã có Helper Y") — đây là sửa lỗi AI thiếu bối cảnh, không phải lách. Dev *nâng cấp* thì luôn được, không cần lý do. Nhưng override chỉ đụng tầng đặc tả; TDD + bằng chứng (điều II, III) không override được. Ghi lý do vào PR/commit.
+- **Nghi ngờ giữa 2 cấp → chọn cấp cao hơn.** Chi phí thừa một gate rẻ hơn nhiều chi phí thiếu một spec.
 - **Việc phình to giữa chừng → DỪNG và thăng cấp.** "Bug fix" mà bắt đầu chạm module thứ hai hoặc phát sinh câu hỏi thiết kế = đó là feature trá hình. Dừng, viết spec, đi đường Cấp 2/3. Không "tiện tay" làm feature dưới danh nghĩa bug fix.
 - **Cấp 0/1 không có nghĩa là vô luật.** Constitution điều II (TDD) và III (bằng chứng) áp dụng ở mọi cấp — cái được bỏ là *giấy tờ đặc tả*, không phải *kỷ luật thực thi*.
 
@@ -132,7 +163,7 @@ Vì chi phí của nó gần như bằng 0 so với lợi ích: regression test 
                                                                   ▼
    ⑤  /speckit.tasks    ──>  ⑥  /speckit.analyze    GATE 3: nhất quán chéo
                                                                   ▼
-   ⑦  REVIEW-spec: team review Ý ĐỊNH                GATE 4: người duyệt
+   ⑦  PR-spec: team review Ý ĐỊNH                   GATE 4: người duyệt
                                                                   ▼
 ════════ TẦNG THỰC THI (Superpowers — kỷ luật không khoan nhượng) ═
 
@@ -142,6 +173,10 @@ Vì chi phí của nó gần như bằng 0 so với lợi ích: regression test 
 
    ⑨  /speckit.converge → PR-code → merge           GATE 5: hết drift
 ```
+
+### Checkpoint xác nhận của người dùng (điều VIII)
+
+Với Cấp 3, agent dừng chờ xác nhận tường minh tại **5 điểm**: sau clarify (⑦❶ spec chốt), sau checklist (❷ plan chốt), sau analyze (❸ tasks chốt — chính là lúc mở PR-spec), sau khi implement xong toàn bộ tasks (❹ trước converge), và trước merge (❺). Khi dừng, agent phải trình: artifact + trạng thái DoD + các điểm cần quyết. **Không dừng theo từng task trong Phase 5** — review tự động 2 tầng đảm nhận việc đó; dừng giữa Phase 5 chỉ khi phát hiện spec sai.
 
 ### Phase 1 — Spec (Cái gì & Tại sao) — tầng đặc tả
 
@@ -175,13 +210,7 @@ Vì chi phí của nó gần như bằng 0 so với lợi ích: regression test 
 
 ### Phase 4 — Human Gate
 
-8. **Review ý định và Quyết định môi trường duyệt:**
-   Sau khi `/speckit.analyze` đạt trạng thái sạch (no Critical), Agent phải DỪNG LẠI và đưa ra lựa chọn cho User:
-   
-   > *"Đặc tả đã sẵn sàng và nhất quán. Bạn muốn tôi (1) Giữ nguyên ở máy local để bạn tự review và ra lệnh thực thi, hay (2) Tự động push và mở PR-spec để review chung với team?"*
-
-   - **Trường hợp 1 (Duyệt Local):** User review trực tiếp các file trong `specs/`. Nếu đồng ý, Agent BẮT BUỘC phải thực hiện 1 commit cục bộ chỉ chứa folder specs/ với message "spec: [Local Approved] NNN-feature-name", User ra lệnh chuyển thẳng sang Phase 5 (`/speckit.implement` hoặc ra lệnh cho subagent). Toàn bộ spec và code sẽ nằm chung trong 1 PR code cuối cùng.
-   - **Trường hợp 2 (Duyệt PR-spec):** User gõ "Yes" hoặc "Mở PR". Agent tiến hành push branch và tạo PR-spec chỉ chứa thư mục `specs/NNN-feature/`. Vòng lặp đóng băng để chờ con người phê duyệt.
+8. Mở **PR-spec** chỉ chứa `specs/NNN-feature/`. Team review **ý định** trước khi tốn compute cho code — gate rẻ nhất chặn sai lầm đắt nhất. Đây là lý do artifact phải nằm ở tầng Spec Kit: Markdown trong repo, diff được, comment được, approve được.
 
 ### Phase 5 — Implement — tầng thực thi (Superpowers)
 
@@ -208,9 +237,7 @@ Vì chi phí của nó gần như bằng 0 so với lợi ích: regression test 
 
 - **Repo là nguồn quy trình duy nhất**: `.specify/` (constitution, templates) + `specs/` + `.claude/skills/` (skill nội bộ) đều commit vào git. Clone repo = có ngay quy trình, bất kể agent nào.
 - **1 feature = 1 branch `NNN-ten-feature` = 1 worktree = 1 thư mục `specs/NNN-ten-feature/`**. Spec Kit tự detect feature theo branch.
-- **Linh hoạt cấu trúc PR**: 
-  - **Duyệt PR-spec:** Chạy quy trình 2 PR tách biệt (PR-spec merge trước, PR-code merge sau).
-  - **Duyệt Local:** Gộp chung 1 PR duy nhất chứa cả `specs/` (đã commit local approved trước đó) và `code` thực thi.
+- **2 loại PR tách biệt**: PR-spec (review ý định — tầng đặc tả) trước, PR-code (review hiện thực — tầng thực thi) sau.
 - **Phân vai model theo tầng**: model mạnh nhất cho tầng đặc tả (specify/clarify/plan — nơi sai lầm đắt nhất); model nhanh cho subagent ở tầng thực thi (task đã đủ tường minh, không cần suy luận sâu).
 - **Convention nội bộ = skill**: naming, error handling, logging... đóng gói bằng `writing-skills` của Superpowers, commit vào `.claude/skills/` — kỷ luật thực thi của team cũng phải là artifact, không phải lời truyền miệng.
 - **Nâng cấp tooling ≠ sửa spec**: cập nhật plugin ở commit riêng, không trộn với thay đổi artifact.
@@ -244,8 +271,11 @@ Vibe coding không bị cấm — nó bị **cách ly**. Default của mọi ses
 | Agent phát hiện spec sai, "tiện tay" code khác spec | Cả hai — thực thi tự sửa luật | Dừng task → sửa spec → regenerate → analyze → tiếp tục |
 | Task quá to (30+ phút) | Thực thi — subagent drift, review khó | Ép chuẩn 2–5 phút ngay trong prompt /speckit.tasks |
 | Chấp nhận "done" bằng lời tuyên bố | Thực thi — vi phạm điều III | Bằng chứng: test pass + review pass |
+| Override hạ cấp mà lý do là "thấy nó nhỏ" chứ không trỏ tới sự thật trong code | Định tuyến — override thành cửa hậu né spec | Điều IX: hạ cấp phải viện dẫn helper/pattern/convention có thật, kiểm chứng được |
+| Dùng override để bỏ TDD/test ("Override: khỏi cần test cho nhanh") | Thực thi — vi phạm hằng số II, III | Override chỉ đụng tầng đặc tả; kỷ luật thực thi bất khả xâm phạm |
+| Chờ xác nhận sau TỪNG TASK trong Phase 5 | Thực thi — người dùng thành nút cổ chai, thông lượng subagent sụp đổ | Xác nhận theo ranh giới phase (điều VIII); review tự động lo tầng task |
+| Agent tự coi im lặng là đồng ý rồi chạy tiếp | Cả hệ thống — checkpoint thành hình thức | Điều VIII: chỉ xác nhận tường minh mới được đi tiếp |
 | Vá triệu chứng bug | Thực thi — bug tái phát | `systematic-debugging`: root cause trước |
-|Code khi chưa commit folder specs/| Đặc tả - không có snapshot cho spec| Bắt buộc Agent tự động commit folder specs/ |
 
 ---
 
@@ -262,14 +292,17 @@ Vibe coding không bị cấm — nó bị **cách ly**. Default của mọi ses
    □ (mơ hồ?) /brainstorm → neo output vào file nếu dài
    □ /speckit.specify (chỉ WHAT/WHY, kỹ thuật để dành cho plan)
    □ /speckit.clarify — resolve hết [NEEDS CLARIFICATION]
+   ⏸ CHỜ XÁC NHẬN ❶: spec chốt
    □ /speckit.plan → □ /speckit.checklist
+   ⏸ CHỜ XÁC NHẬN ❷: plan chốt
    □ /speckit.tasks (task 2–5 phút, file path, verify, test-first)
    □ /speckit.analyze — hết Critical
-   □ DUYỆT LOCAL (Agent commit local specs/ -> Implement)
-   □ DUYỆT PR-SPEC (Push branch ➔ mở PR-spec ➔ Chờ Team Approve)
+   ⏸ CHỜ XÁC NHẬN ❸: PR-spec → team approve
    TẦNG THỰC THI (Superpowers)
    □ Worktree + subagent/task + RED-GREEN-REFACTOR + review 2 tầng
-   □ Spec sai giữa chừng? → DỪNG → quay về tầng đặc tả
+     (không dừng theo task; chỉ dừng nếu spec sai → quay về tầng đặc tả)
+   ⏸ CHỜ XÁC NHẬN ❹: implement xong, trước converge
    ĐÓNG VÒNG
-   □ /speckit.converge → PR-code → merge → xóa worktree
+   □ /speckit.converge → PR-code
+   ⏸ CHỜ XÁC NHẬN ❺: merge → xóa worktree
 ```
