@@ -32,10 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-<<<<<<< Updated upstream
 !.env.example
-=======
->>>>>>> Stashed changes
 
 # vercel
 .vercel
